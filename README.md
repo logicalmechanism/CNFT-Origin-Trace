@@ -51,6 +51,3 @@ python origin_trace.py \
 8634f3bf5cd864c4b661ff25789ae0154b34084d431c222d242bc39c \
 DEADTRAILLOGIC11
 ```
-
-
-.

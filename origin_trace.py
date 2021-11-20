@@ -119,13 +119,18 @@ def track_asset(policy_id: str, asset_name:str, smart_contract_address:str="") -
     G = build_graph(addresses, smart_contract_address)
     return G, addresses
 
+
 def find_node(G, val):
     """
     Return True if a vertex exists within G else False.
     """
     return any([node for node in G.nodes(data=True) if node[0] == val])
 
+
 def analyze_trajectory(G:nx.classes.digraph.DiGraph) -> nx.classes.digraph.DiGraph:
+    """
+    Analyze the NFT trajectory for withdraws and sales.
+    """
     for node in G.nodes(data=True):
         (n, data) = node
         if data['label'] == 'Contract' and find_node(G, n+1) is True:
@@ -207,5 +212,5 @@ if __name__ == "__main__":
     else:
         smart_contract_address = "addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk"
     
-    #
+    # Run the function
     create_html_page(policy_id, asset_name, smart_contract_address, print_flag, save_flag)
