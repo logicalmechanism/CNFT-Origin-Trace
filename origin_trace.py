@@ -1,3 +1,8 @@
+"""
+    File name: origin_trace.py
+    Author: The Ancient Kraken
+    Python Version: 3.9
+"""
 import requests
 import base64
 import networkx as nx
@@ -7,12 +12,13 @@ from typing import Tuple
 import sys
 import json
 
+
 ###############################################################################
 # Requires Blockfrost API Key.
 with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-# Store the blockfrost api key inside blockfrost_api.key.
-headers = {'Project_id': API_KEY}
+headers = { 'Project_id': API_KEY}
 ###############################################################################
+
 
 def get(endpoint: str) -> dict:
     """
@@ -87,6 +93,8 @@ def build_graph(addresses: dict, smart_contract_address: str) -> nx.classes.digr
         if counter > 0:
             if addresses[tx_hash] != smart_contract_address:
                 G.add_node(counter, address=addresses[tx_hash], label=str(counter), title=addresses[tx_hash], color=selected_color)
+                if G.nodes[counter-1]['label'] == 'Contract':
+                    G.add_node(counter, label='Tokhun')
             else:
                 # A specific address to uniquely label.
                 G.add_node(counter-1, label='Tokhun')
@@ -143,16 +151,16 @@ def create_html_page(policy_id: str, asset_name:str, smart_contract_address:str=
     """
     print('\nTracking Asset...\n')
     G, addresses = track_asset(policy_id, asset_name, smart_contract_address)
-    if print_flag is True:
-        print_address_data(addresses)
-    if save_flag is True:
-        save_address_data(addresses)
     print('Creating HTML page')
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
-    nt.show('nx.html')
+    if print_flag is True:
+        print_address_data(addresses)
+        nt.show('nx.html')
+    if save_flag is True:
+        save_address_data(addresses)
+        nt.save_graph('nx.html')
     print('\nComplete!\n')
-
 
 
 if __name__ == "__main__":
@@ -164,5 +172,8 @@ if __name__ == "__main__":
     except IndexError:
         print('Missing policy id or asset name. The format should be:\n\npython origin_trace.py policy_id asset_name\n')
         sys.exit()
-    smart_contract_address = "addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk"
+    if len(args) == 4:
+        smart_contract_address = args[3]
+    else:
+        smart_contract_address = "addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk"
     create_html_page(policy_id, asset_name, smart_contract_address, False, True)
