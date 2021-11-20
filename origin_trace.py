@@ -4,6 +4,8 @@ import networkx as nx
 from pyvis.network import Network
 import random
 from typing import Tuple
+import sys
+import json
 
 ###############################################################################
 # Requires Blockfrost API Key.
@@ -87,6 +89,7 @@ def build_graph(addresses: dict, smart_contract_address: str) -> nx.classes.digr
                 G.add_node(counter, address=addresses[tx_hash], label=str(counter), title=addresses[tx_hash], color=selected_color)
             else:
                 # A specific address to uniquely label.
+                G.add_node(counter-1, label='Tokhun')
                 G.add_node(counter, address=addresses[tx_hash], label='Contract', title=addresses[tx_hash], color=selected_color)
             # Add edge only if there exists one.
             G.add_edge(counter-1, counter, trxHash=tx_hash, title=tx_hash)
@@ -100,8 +103,11 @@ def track_asset(policy_id: str, asset_name:str, smart_contract_address:str="") -
     Provide a smart contract address to mark a specific wallet.
     """
     asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
+    print('Getting All Transactions')
     trx_hashes = all_transactions(asset)
+    print('Creating The Address Dictionary')
     addresses = txhash_to_address(trx_hashes, asset)
+    print('Building The Directed Graph')
     G = build_graph(addresses, smart_contract_address)
     return G, addresses
 
@@ -121,21 +127,41 @@ def print_address_data(addresses: list):
             printed.append(addresses[txhash])
 
 
-def create_html_page(policy_id: str, asset_name:str, smart_contract_address:str="", print_flag:bool=True):
+def save_address_data(addresses:dict):
+    """
+    JSON dump the address dictionary into a file.
+    """
+    with open('cnft_history.json', 'w+') as outfile:
+        json.dump(addresses, outfile)
+
+
+def create_html_page(policy_id: str, asset_name:str, smart_contract_address:str="", print_flag:bool=False, save_flag:bool=False):
     """
     Use track asset to provide information to create a html file of the direct graph. By 
     default the function prints the address data to the console.
     """
+    print('\nTracking Asset...\n')
     G, addresses = track_asset(policy_id, asset_name, smart_contract_address)
     if print_flag is True:
         print_address_data(addresses)
+    if save_flag is True:
+        save_address_data(addresses)
+    print('Creating HTML page')
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
     nt.show('nx.html')
+    print('\nComplete!\n')
+
 
 
 if __name__ == "__main__":
-    policy_id = "8634f3bf5cd864c4b661ff25789ae0154b34084d431c222d242bc39c"
-    asset_name = "DEADTRAILLOGIC11"
+    # Pass in policy id and asset name.
+    args = sys.argv
+    try:
+        policy_id = args[1]
+        asset_name = args[2]
+    except IndexError:
+        print('Missing policy id or asset name. The format should be:\n\npython origin_trace.py policy_id asset_name\n')
+        sys.exit()
     smart_contract_address = "addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk"
-    create_html_page(policy_id, asset_name, smart_contract_address)
+    create_html_page(policy_id, asset_name, smart_contract_address, False, True)
