@@ -131,8 +131,9 @@ def save_address_data(addresses:dict):
     """
     JSON dump the address dictionary into a file.
     """
+    print('Writing To File')
     with open('cnft_history.json', 'w+') as outfile:
-        json.dump(addresses, outfile)
+        json.dump(addresses, outfile, indent=2)
 
 
 def create_html_page(policy_id: str, asset_name:str, smart_contract_address:str="", print_flag:bool=False, save_flag:bool=False):
