@@ -20,7 +20,7 @@ headers = { 'Project_id': API_KEY}
 ###############################################################################
 
 
-def get(endpoint: str) -> dict:
+def get(endpoint:str) -> dict:
     """
     Return the json reponse from an endpoint.
     """
@@ -28,7 +28,7 @@ def get(endpoint: str) -> dict:
     return response
 
 
-def all_transactions(asset: str, mainnet_flag:bool=True) -> list:
+def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     """
     Create a list of all the transactions for a given asset.
     """
@@ -55,7 +55,7 @@ def all_transactions(asset: str, mainnet_flag:bool=True) -> list:
     return trx
 
 
-def txhash_to_address(trx_hashes: list, asset:str, mainnet_flag:bool=True) -> dict:
+def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dict:
     """
     Create a dictionary of transaction hashes and addresses from a list of 
     every transaction of some asset.
@@ -83,7 +83,7 @@ def txhash_to_address(trx_hashes: list, asset:str, mainnet_flag:bool=True) -> di
     return addresses
 
 
-def build_graph(addresses: dict, script_address: str,) -> nx.classes.digraph.DiGraph:
+def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGraph:
     """
     Builds a directed graph from the dictionary of transaction hashes and
     addresses, using the smart contract address to pinpoint a specific
@@ -120,7 +120,7 @@ def build_graph(addresses: dict, script_address: str,) -> nx.classes.digraph.DiG
     return G
 
 
-def track_asset(policy_id: str, asset_name:str, script_address:str="", mainnet_flag:bool=True) -> Tuple[nx.classes.digraph.DiGraph, dict]:
+def track_asset(policy_id:str, asset_name:str, script_address:str="", mainnet_flag:bool=True) -> Tuple[nx.classes.digraph.DiGraph, dict]:
     """
     Track an asset by its policy and asset name from origin to present wallet.
     Provide a smart contract address to mark a specific wallet.
@@ -135,7 +135,7 @@ def track_asset(policy_id: str, asset_name:str, script_address:str="", mainnet_f
     return G, addresses
 
 
-def find_node(G, val):
+def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
     """
     Return True if a vertex exists within G else False.
     """
@@ -158,7 +158,7 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph) -> nx.classes.digraph.DiGra
     return G
 
 
-def print_address_data(addresses: list):
+def print_address_data(addresses:list) -> None:
     """
     Print addresses data to console.
     """
@@ -173,7 +173,7 @@ def print_address_data(addresses: list):
             printed.append(addresses[txhash])
 
 
-def save_address_data(addresses:dict):
+def save_address_data(addresses:dict) -> None:
     """
     JSON dump the address dictionary into a file.
     """
@@ -182,21 +182,22 @@ def save_address_data(addresses:dict):
         json.dump(addresses, outfile, indent=2)
 
 @click.command()
-@click.option('--policy_id',prompt='The policy id of the NFT.', help='Required')
-@click.option('--asset_name', prompt='The asset name of the NFT.', help='Required')
+@click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
+@click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
 @click.option('--script_address', default="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", help='Optional')
-@click.option('--print_flag', default=False, help='Optional')
-@click.option('--save_flag', default=True, help='Optional')
-@click.option('--mainnet_flag', default=True, help='Optional')
-def create_html_page(policy_id: str, asset_name:str, script_address:str="", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True):
+@click.option('--print_flag',     default=False,                                                        help='Optional')
+@click.option('--save_flag',      default=True,                                                         help='Optional')
+@click.option('--mainnet_flag',   default=True,                                                         help='Optional')
+def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True) -> None:
     """
     Use track asset to provide information to create a html file of the direct graph. By 
     default the function prints the address data to the console.
     """
-    click.echo('\nTracking Asset...\n')
+    click.echo(click.style('\nTracking Asset', fg='blue'))
+
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
     G = analyze_trajectory(G)
-    click.echo('Creating HTML page')
+    click.echo(click.style('Creating HTML page', fg='blue'))
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
     if print_flag is True:
@@ -206,13 +207,9 @@ def create_html_page(policy_id: str, asset_name:str, script_address:str="", prin
         save_address_data(addresses)
         nt.save_graph('nx.html')
     else:
-        click.echo("No flag is set.")
-    click.echo('\nComplete!\n')
+        click.echo(click.style('No flag is set.', fg='red'))
+    click.echo(click.style('\nComplete!\n', fg='green'))
 
 
-if __name__ == "__main__":
-    """
-    Change the parameters to desired use case.
-    """
-    # Run the function
+if __name__ == '__main__':
     create_html_page()
