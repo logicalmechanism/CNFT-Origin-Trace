@@ -42,7 +42,8 @@ create_html_page(
     smart_contract_address,
     print_flag   = False,
     save_flag    = True,
-    mainnet_flag = True
+    mainnet_flag = True,
+    actions      = "('Withdraw', 'Sold')"
 )
 ```
 
@@ -71,7 +72,8 @@ python origin_trace.py \
     --script_address addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk \
     --print_flag False \
     --save_flag True \
-    --mainnet_flag True
+    --mainnet_flag True \
+    --actions "('Withdraw', 'Sold')"
 ```
 
 A help menu also exists.
@@ -88,8 +90,19 @@ Options:
   --policy_id TEXT        Required
   --asset_name TEXT       Required
   --script_address TEXT   Optional
-  --print_flag BOOLEAN    Optional
-  --save_flag BOOLEAN     Optional
-  --mainnet_flag BOOLEAN  Optional
+  --print_flag BOOLEAN    Optional  [default: False]
+  --save_flag BOOLEAN     Optional  [default: True]
+  --mainnet_flag BOOLEAN  Optional  [default: True]
+  --actions TEXT          Optional  [default: ('Withdraw', 'Sold')]
   --help                  Show this message and exit.
+```
+
+## Testing
+
+The file ```origin_trace.py``` has a unittest located in the test.py file.
+
+Run all the tests with the command below.
+
+```
+python test.py
 ```
