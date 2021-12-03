@@ -43,7 +43,7 @@ create_html_page(
     print_flag   = False,
     save_flag    = True,
     mainnet_flag = True,
-    actions      = ('Withdraw', 'Sold')
+    actions      = "('Withdraw', 'Sold')"
 )
 ```
 
@@ -73,7 +73,7 @@ python origin_trace.py \
     --print_flag False \
     --save_flag True \
     --mainnet_flag True \
-    --actions ('Withdraw', 'Sold')
+    --actions "('Withdraw', 'Sold')"
 ```
 
 A help menu also exists.
@@ -90,9 +90,10 @@ Options:
   --policy_id TEXT        Required
   --asset_name TEXT       Required
   --script_address TEXT   Optional
-  --print_flag BOOLEAN    Optional
-  --save_flag BOOLEAN     Optional
-  --mainnet_flag BOOLEAN  Optional
+  --print_flag BOOLEAN    Optional  [default: False]
+  --save_flag BOOLEAN     Optional  [default: True]
+  --mainnet_flag BOOLEAN  Optional  [default: True]
+  --actions TEXT          Optional  [default: ('Withdraw', 'Sold')]
   --help                  Show this message and exit.
 ```
 

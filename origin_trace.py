@@ -10,7 +10,6 @@ import networkx as nx
 from pyvis.network import Network
 import random
 from typing import Tuple
-import sys
 import json
 import click
 import matplotlib.colors as mcolors
@@ -325,8 +324,6 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
         nt.save_graph('nx.html')
     else:
         click.echo(click.style('Error: No Flag Is Set.', fg='red'))
-        sys.exit()
-    
     # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))
 
