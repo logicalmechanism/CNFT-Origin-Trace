@@ -9,14 +9,14 @@ A python script to perform an origin trace on a cnft.
 This is a directed graph where each node is a unique wallet and each colored edge is a transaction going between unique wallets. The darker edges represent either a withdraw and sell action. Each color is defined by the amount of unique wallets so if the colors are equal then its the same wallet
 
 ### Requirements
-This file requires a mainnet Blockfrost api key.
+This file requires a mainnet or testnet Blockfrost api key.
 
 ```bash
 # Requires a mainnet Blockfrost api key.
 echo ${BLOCKFROST_API_KEY} >> blockfrost_api.key
 ```
 
-Python 3.9+, networkX, and pyVis will be needed.
+Python 3.9+, click, networkX, and pyVis will be needed.
 
 ```bash
 pip install -r requirements.txt
@@ -35,8 +35,9 @@ create_html_page(
     policy_id,
     asset_name,
     smart_contract_address,
-    print_flag=True,
-    save_flag=True
+    print_flag   = False,
+    save_flag    = True,
+    mainnet_flag = True
 )
 ```
 
@@ -44,10 +45,42 @@ If print is set to true, it will display the information inside the terminal and
 
 If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into a json file, cnft_history.json.
 
-This file can also be used directly from the terminal.
+Set mainet_flag to False for testnet tracing.
+
+This file can also be used directly from the terminal. It will prompt you to enter the policy id and asset name.
 
 ```bash
+python origin_trace.py 
+# The policy id of the NFT.: 8634f3bf5cd864c4b661ff25789ae0154b34084d431c222d242bc39c
+# The asset name of the NFT.: DEADTRAILLOGIC11
+```
+
+Each option can be manually added to the function call.
+```
 python origin_trace.py \
-8634f3bf5cd864c4b661ff25789ae0154b34084d431c222d242bc39c \
-DEADTRAILLOGIC11
+    --policy_id 8634f3bf5cd864c4b661ff25789ae0154b34084d431c222d242bc39c \
+    --asset_name DEADTRAILLOGIC11 \
+    --script_address addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk \
+    --print_flag False \
+    --save_flag True \
+    --mainnet_flag True
+```
+
+A help menu exists.
+
+```
+python origin_trace.py --help
+Usage: origin_trace.py [OPTIONS]
+
+  Use track asset to provide information to create a html file of the direct
+  graph. By  default the function prints the address data to the console.
+
+Options:
+  --policy_id TEXT        Required
+  --asset_name TEXT       Required
+  --script_address TEXT   Optional
+  --print_flag BOOLEAN    Optional
+  --save_flag BOOLEAN     Optional
+  --mainnet_flag BOOLEAN  Optional
+  --help                  Show this message and exit.
 ```
