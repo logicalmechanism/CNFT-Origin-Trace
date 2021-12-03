@@ -1,7 +1,8 @@
 """
-File name : origin_trace.py
-Testing   : test.py
-Author    : The Ancient Kraken
+File name   : origin_trace.py
+Testing     : test.py
+Author      : The Ancient Kraken
+Description : A python script to perform an origin trace on a CNFT.
 """
 import requests
 import base64
@@ -111,6 +112,7 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
                     addresses[trx] = response_address
     return addresses
 
+
 def select_colors(number:int) -> list:
     """
     Select N unique colors that are distingishable.
@@ -151,8 +153,7 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
     counter = 0
     unique_addresses = list(set(addresses.values()))
     
-    # Randomly generate a list of colors with size len(unique addresses).
-    # list_of_colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(len(unique_addresses))]
+    # Randomly generate a list of colors
     list_of_colors = select_colors(len(unique_addresses))
     
     # Loop all the transaction hashes from the addresses.
@@ -160,12 +161,15 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
         nodes = [x for x,y in G.nodes(data=True) if y['address'] == addresses[tx_hash]] # Correct node count.
         index = unique_addresses.index(addresses[tx_hash])
         selected_color = list_of_colors[index]
+        
         # Check if the next wallet is new and there are wallets to go map.
         if len(nodes) > 0 and counter-1 in nodes:
             continue
+        
         # Start the graph at the Origin
         if counter == 0:
             G.add_node(counter, address=addresses[tx_hash], label='Origin', title=addresses[tx_hash], color=selected_color)
+        
         # Other nodes
         if counter > 0:
             if addresses[tx_hash] != script_address:
@@ -180,6 +184,7 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
             G.add_edge(counter-1, counter, trxHash=tx_hash, title=tx_hash)
         counter += 1
     return G
+
 
 def con_cat(policy_id:str, asset_name:str) -> str:
     """
@@ -233,8 +238,10 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('W
     """
     Analyze the NFT trajectory for withdraws and sales.
     """
+    
     action_1 = actions[0]
     action_2 = actions[1]
+    
     # Loop every node.
     for node in G.nodes(data=True):
         (n, data) = node
@@ -250,19 +257,23 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('W
     return G
 
 
-def print_address_data(addresses:list) -> None:
+def print_address_data(addresses:list, script_address: str) -> None:
     """
     Print addresses data to console.
     """
+    
     number_of_wallets = len(list(set(addresses.values())))
-    click.echo(click.style(f'{number_of_wallets} Unique Wallet', fg='magenta'))
+    click.echo(click.style(f'{number_of_wallets} Unique Wallets', fg='magenta'))
 
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
             click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
         else:
-            click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='white'))
+            if addresses[txhash] == script_address:
+                click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='yellow'))
+            else:
+                click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='white'))
             click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
             printed.append(addresses[txhash])
 
@@ -271,8 +282,11 @@ def save_address_data(addresses:dict) -> None:
     """
     JSON dump the address dictionary into a file.
     """
-    with open('cnft_history.json', 'w+') as outfile:
-        json.dump(addresses, outfile, indent=2)
+    
+    # If adddress is a dict then attempt to dump to file.
+    if isinstance(addresses, dict):
+        with open('cnft_history.json', 'w+') as outfile:
+            json.dump(addresses, outfile, indent=2)
 
 
 @click.command()
@@ -288,16 +302,22 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     Use track asset to provide information to create a html file of the direct graph. By 
     default the function prints the address data to the console.
     """
+    
+    # Track asset
     click.echo(click.style('\nTracking Asset', fg='blue'))
     actions = ast.literal_eval(actions)
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
     G = analyze_trajectory(G, actions)
+    
+    # Create html page
     click.echo(click.style('Creating HTML page', fg='blue'))
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
+    
+    # Flag Checking
     if print_flag is True:
         click.echo(click.style('Opening HTML page', fg='yellow'))
-        print_address_data(addresses)
+        print_address_data(addresses, script_address)
         nt.show('nx.html')
     elif save_flag is True:
         click.echo(click.style('Saving html page.', fg='yellow'))
@@ -306,6 +326,8 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     else:
         click.echo(click.style('Error: No Flag Is Set.', fg='red'))
         sys.exit()
+    
+    # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))
 
 
