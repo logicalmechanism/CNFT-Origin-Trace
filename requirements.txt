@@ -9,6 +9,7 @@ cbor2==5.4.2
 certifi==2021.10.8
 cffi @ file:///tmp/build/80754af9/cffi_1613246951236/work
 chardet @ file:///tmp/build/80754af9/chardet_1607706775000/work
+click==8.0.3
 cmarkgfm @ file:///tmp/build/80754af9/cmarkgfm_1613500899420/work
 colorama @ file:///tmp/build/80754af9/colorama_1607707115595/work
 cryptography @ file:///tmp/build/80754af9/cryptography_1616767007030/work
@@ -53,7 +54,6 @@ psutil==5.8.0
 psycopg2 @ file:///tmp/build/80754af9/psycopg2_1612298595717/work
 ptyprocess==0.7.0
 pyasn1==0.4.8
-pyccli==0.0.3
 pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
 pycryptodome==3.10.1
 Pygments @ file:///tmp/build/80754af9/pygments_1629234116488/work

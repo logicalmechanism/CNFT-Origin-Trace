@@ -1,7 +1,6 @@
 """
     File name: origin_trace.py
     Author: The Ancient Kraken
-    Python Version: 3.9
 """
 import requests
 import base64
@@ -11,16 +10,18 @@ import random
 from typing import Tuple
 import sys
 import json
-
+import click
 
 ###############################################################################
 # Requires Blockfrost API Key.
 with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-headers = { 'Project_id': API_KEY}
+headers    = { 'Project_id': API_KEY}
+mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
+testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
 ###############################################################################
 
 
-def get(endpoint: str) -> dict:
+def get(endpoint:str) -> dict:
     """
     Return the json reponse from an endpoint.
     """
@@ -28,7 +29,7 @@ def get(endpoint: str) -> dict:
     return response
 
 
-def all_transactions(asset: str) -> list:
+def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     """
     Create a list of all the transactions for a given asset.
     """
@@ -36,17 +37,26 @@ def all_transactions(asset: str) -> list:
     trx = []
     # Query each page until nothing returns.
     while True:
-        response = get('https://cardano-mainnet.blockfrost.io/api/v0/assets/{}/transactions?page={}'.format(asset, page))
+        endpoint = 'assets/{}/transactions?page={}'.format(asset, page)
+        if mainnet_flag is True:
+            response = get(mainnet + endpoint)
+        else:
+            response = get(testnet + endpoint)
+        try:
+            response['error']
+            click.echo(click.style('Error: Invalid Inputs', fg='red'))
+            sys.exit()
+        except TypeError:
+            pass
         if response == []:
             break
         for obj in response:
-            tx_hash = obj['tx_hash']
-            trx.append(tx_hash)
+            trx.append(obj['tx_hash'])
         page += 1
     return trx
 
 
-def txhash_to_address(trx_hashes: list, asset:str) -> dict:
+def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dict:
     """
     Create a dictionary of transaction hashes and addresses from a list of 
     every transaction of some asset.
@@ -54,21 +64,29 @@ def txhash_to_address(trx_hashes: list, asset:str) -> dict:
     addresses = {}
     # Loop each tx hash from all the transactions
     for trx in trx_hashes:
-        response_utxos = get('https://cardano-mainnet.blockfrost.io/api/v0/txs/{}/utxos'.format(trx))
+        endpoint = 'txs/{}/utxos'.format(trx)
+        if mainnet_flag is True:
+            response_utxos = get(mainnet + endpoint)
+        else:
+            response_utxos = get(testnet + endpoint)
         # Loop all the outputs from each UTxO of each transaction.
         for outputs in response_utxos['outputs']:
             # Loop the amounts
             for amt in outputs['amount']:
                 if amt['unit'] == asset:
+                    endpoint2 = 'addresses/{}'.format(outputs['address'])
                     # Check if stake address is available.
-                    response_address = get('https://cardano-mainnet.blockfrost.io/api/v0/addresses/{}'.format(outputs['address']))['stake_address']
+                    if mainnet_flag is True:
+                        response_address = get(mainnet + endpoint2)['stake_address']
+                    else:
+                        response_address = get(testnet + endpoint2)['stake_address']
                     if response_address is None:
                         response_address = outputs['address']
                     addresses[trx] = response_address
     return addresses
 
 
-def build_graph(addresses: dict, smart_contract_address: str) -> nx.classes.digraph.DiGraph:
+def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGraph:
     """
     Builds a directed graph from the dictionary of transaction hashes and
     addresses, using the smart contract address to pinpoint a specific
@@ -90,14 +108,15 @@ def build_graph(addresses: dict, smart_contract_address: str) -> nx.classes.digr
         # Start the graph at the Origin
         if counter == 0:
             G.add_node(counter, address=addresses[tx_hash], label='Origin', title=addresses[tx_hash], color=selected_color)
+        # Other nodes
         if counter > 0:
-            if addresses[tx_hash] != smart_contract_address:
+            if addresses[tx_hash] != script_address:
                 G.add_node(counter, address=addresses[tx_hash], label=str(counter), title=addresses[tx_hash], color=selected_color)
                 if G.nodes[counter-1]['label'] == 'Contract':
-                    G.add_node(counter, label='Tokhun')
+                    G.add_node(counter, label='Wallet')
             else:
                 # A specific address to uniquely label.
-                G.add_node(counter-1, label='Tokhun')
+                G.add_node(counter-1, label='Wallet')
                 G.add_node(counter, address=addresses[tx_hash], label='Contract', title=addresses[tx_hash], color=selected_color)
             # Add edge only if there exists one.
             G.add_edge(counter-1, counter, trxHash=tx_hash, title=tx_hash)
@@ -105,22 +124,19 @@ def build_graph(addresses: dict, smart_contract_address: str) -> nx.classes.digr
     return G
 
 
-def track_asset(policy_id: str, asset_name:str, smart_contract_address:str="") -> Tuple[nx.classes.digraph.DiGraph, dict]:
+def track_asset(policy_id:str, asset_name:str, script_address:str="", mainnet_flag:bool=True) -> Tuple[nx.classes.digraph.DiGraph, dict]:
     """
     Track an asset by its policy and asset name from origin to present wallet.
     Provide a smart contract address to mark a specific wallet.
     """
     asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
-    print('Getting All Transactions')
-    trx_hashes = all_transactions(asset)
-    print('Creating The Address Dictionary')
-    addresses = txhash_to_address(trx_hashes, asset)
-    print('Building The Directed Graph')
-    G = build_graph(addresses, smart_contract_address)
+    trx_hashes = all_transactions(asset, mainnet_flag)
+    addresses = txhash_to_address(trx_hashes, asset, mainnet_flag)
+    G = build_graph(addresses, script_address)
     return G, addresses
 
 
-def find_node(G, val):
+def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
     """
     Return True if a vertex exists within G else False.
     """
@@ -143,74 +159,63 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph) -> nx.classes.digraph.DiGra
     return G
 
 
-def print_address_data(addresses: list):
+def print_address_data(addresses:list) -> None:
     """
     Print addresses data to console.
     """
-    print(len(list(set(addresses.values()))), 'Unique Wallet')
+    number_of_wallets = len(list(set(addresses.values())))
+    click.echo(click.style(f'{number_of_wallets} Unique Wallet', fg='magenta'))
+
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
-            print('Tx Hash:', txhash)
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
         else:
-            print('\nAddress:', addresses[txhash])
-            print('Tx Hash:', txhash)
+            click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='white'))
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
             printed.append(addresses[txhash])
 
 
-def save_address_data(addresses:dict):
+def save_address_data(addresses:dict) -> None:
     """
     JSON dump the address dictionary into a file.
     """
-    print('Writing To File')
     with open('cnft_history.json', 'w+') as outfile:
         json.dump(addresses, outfile, indent=2)
 
 
-def create_html_page(policy_id: str, asset_name:str, smart_contract_address:str="", print_flag:bool=False, save_flag:bool=False):
+@click.command()
+@click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
+@click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
+@click.option('--script_address', default="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", help='Optional')
+@click.option('--print_flag',     default=False,                                                        help='Optional')
+@click.option('--save_flag',      default=True,                                                         help='Optional')
+@click.option('--mainnet_flag',   default=True,                                                         help='Optional')
+def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True) -> None:
     """
     Use track asset to provide information to create a html file of the direct graph. By 
     default the function prints the address data to the console.
     """
-    print('\nTracking Asset...\n')
-    G, addresses = track_asset(policy_id, asset_name, smart_contract_address)
+    click.echo(click.style('\nTracking Asset', fg='blue'))
+
+    G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
     G = analyze_trajectory(G)
-    print('Creating HTML page')
+    click.echo(click.style('Creating HTML page', fg='blue'))
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
     if print_flag is True:
+        click.echo(click.style('Opening HTML page', fg='yellow'))
         print_address_data(addresses)
         nt.show('nx.html')
     elif save_flag is True:
+        click.echo(click.style('Saving html page.', fg='yellow'))
         save_address_data(addresses)
         nt.save_graph('nx.html')
     else:
-        print("No flag is set.")
-    print('\nComplete!\n')
-
-
-if __name__ == "__main__":
-    """
-    Change the parameters to desired use case.
-    """
-    # Define flags
-    print_flag = False
-    save_flag  = True
-    
-    # Pass in policy id and asset name.
-    args = sys.argv
-    try:
-        policy_id  = args[1]
-        asset_name = args[2]
-    except IndexError:
-        print('Missing policy id or asset name. The format should be:\n\npython origin_trace.py policy_id asset_name\n')
+        click.echo(click.style('Error: No Flag Is Set.', fg='red'))
         sys.exit()
-    
-    # Optional smart contract or address arg
-    if len(args) == 4:
-        smart_contract_address = args[3]
-    else:
-        smart_contract_address = "addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk"
-    
-    # Run the function
-    create_html_page(policy_id, asset_name, smart_contract_address, print_flag, save_flag)
+    click.echo(click.style('\nComplete!\n', fg='green'))
+
+
+if __name__ == '__main__':
+    create_html_page()
