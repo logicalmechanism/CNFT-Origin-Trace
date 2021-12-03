@@ -37,21 +37,21 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     trx = []
     # Query each page until nothing returns.
     while True:
+        endpoint = 'assets/{}/transactions?page={}'.format(asset, page)
         if mainnet_flag is True:
-            response = get(mainnet + 'assets/{}/transactions?page={}'.format(asset, page))
+            response = get(mainnet + endpoint)
         else:
-            response = get(testnet + 'assets/{}/transactions?page={}'.format(asset, page))
+            response = get(testnet + endpoint)
         try:
             response['error']
-            click.echo(click.style('Error: Check The Input Options.', fg='red'))
+            click.echo(click.style('Error: Invalid Inputs', fg='red'))
             sys.exit()
         except TypeError:
             pass
         if response == []:
             break
         for obj in response:
-            tx_hash = obj['tx_hash']
-            trx.append(tx_hash)
+            trx.append(obj['tx_hash'])
         page += 1
     return trx
 
@@ -64,20 +64,22 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
     addresses = {}
     # Loop each tx hash from all the transactions
     for trx in trx_hashes:
+        endpoint = 'txs/{}/utxos'.format(trx)
         if mainnet_flag is True:
-            response_utxos = get(mainnet + 'txs/{}/utxos'.format(trx))
+            response_utxos = get(mainnet + endpoint)
         else:
-            response_utxos = get(testnet + 'txs/{}/utxos'.format(trx))
+            response_utxos = get(testnet + endpoint)
         # Loop all the outputs from each UTxO of each transaction.
         for outputs in response_utxos['outputs']:
             # Loop the amounts
             for amt in outputs['amount']:
                 if amt['unit'] == asset:
+                    endpoint2 = 'addresses/{}'.format(outputs['address'])
                     # Check if stake address is available.
                     if mainnet_flag is True:
-                        response_address = get(mainnet + 'addresses/{}'.format(outputs['address']))['stake_address']
+                        response_address = get(mainnet + endpoint2)['stake_address']
                     else:
-                        response_address = get(testnet + 'addresses/{}'.format(outputs['address']))['stake_address']
+                        response_address = get(testnet + endpoint2)['stake_address']
                     if response_address is None:
                         response_address = outputs['address']
                     addresses[trx] = response_address
@@ -210,7 +212,7 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
         save_address_data(addresses)
         nt.save_graph('nx.html')
     else:
-        click.echo(click.style('Error: No flag is set.', fg='red'))
+        click.echo(click.style('Error: No Flag Is Set.', fg='red'))
         sys.exit()
     click.echo(click.style('\nComplete!\n', fg='green'))
 

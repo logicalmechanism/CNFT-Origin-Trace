@@ -1,12 +1,12 @@
 # CNFT-Origin-Trace
 
-A python script to perform an origin trace on a cnft.
+A python script to perform an origin trace on a CNFT.
 
 ![alt text](nx_html_image.png)
 
 ## What is this graph?
 
-This is a directed graph where each node is a unique wallet and each colored edge is a transaction going between unique wallets. The darker edges represent either a withdraw and sell action and do not represent NFT movement. Each color used in the graph is defined by the amount of unique wallets. If two or more nodes have colors that are equal then its the same wallet.
+This is a directed graph where each node is a unique wallet and each colored edge is a transaction going between unique wallets. The darker edges represent either a withdraw and sell action and do not represent NFT movement. Each color used in the graph is defined by the amount of unique wallets. If two or more nodes have colors that are equal then its the same wallet. The graph starts at the Origin node and follows the NFT as it moves throughout the blockchain.
 
 ### Requirements
 
@@ -15,7 +15,7 @@ This is a directed graph where each node is a unique wallet and each colored edg
 - [PyVis](https://github.com/WestHealth/pyvis)
 - [NetworkX](https://github.com/networkx/networkx)
 
-This file requires a mainnet or testnet [BlockFrost](https://blockfrost.io/) api key. Place the api key into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
+This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. Place the api key into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
 
 Use the requirements.txt file to install the python requirements with the pip command below.
 
@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ## How to use
 
-The file is designed to be imported and ran from the terminal. 
+The file is designed to be imported and ran from the terminal.
 
 ### Importing
 
