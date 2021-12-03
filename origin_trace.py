@@ -1,7 +1,6 @@
 """
     File name: origin_trace.py
     Author: The Ancient Kraken
-    Python Version: 3.9
 """
 import requests
 import base64
@@ -16,7 +15,9 @@ import click
 ###############################################################################
 # Requires Blockfrost API Key.
 with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-headers = { 'Project_id': API_KEY}
+headers    = { 'Project_id': API_KEY}
+mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
+testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
 ###############################################################################
 
 
@@ -37,12 +38,12 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     # Query each page until nothing returns.
     while True:
         if mainnet_flag is True:
-            response = get('https://cardano-mainnet.blockfrost.io/api/v0/assets/{}/transactions?page={}'.format(asset, page))
+            response = get(mainnet + 'assets/{}/transactions?page={}'.format(asset, page))
         else:
-            response = get('https://cardano-testnet.blockfrost.io/api/v0/assets/{}/transactions?page={}'.format(asset, page))
+            response = get(testnet + 'assets/{}/transactions?page={}'.format(asset, page))
         try:
             response['error']
-            print('Error: Check The Input Options.')
+            click.echo(click.style('Error: Check The Input Options.', fg='red'))
             sys.exit()
         except TypeError:
             pass
@@ -64,9 +65,9 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
     # Loop each tx hash from all the transactions
     for trx in trx_hashes:
         if mainnet_flag is True:
-            response_utxos = get('https://cardano-mainnet.blockfrost.io/api/v0/txs/{}/utxos'.format(trx))
+            response_utxos = get(mainnet + 'txs/{}/utxos'.format(trx))
         else:
-            response_utxos = get('https://cardano-testnet.blockfrost.io/api/v0/txs/{}/utxos'.format(trx))
+            response_utxos = get(testnet + 'txs/{}/utxos'.format(trx))
         # Loop all the outputs from each UTxO of each transaction.
         for outputs in response_utxos['outputs']:
             # Loop the amounts
@@ -74,9 +75,9 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
                 if amt['unit'] == asset:
                     # Check if stake address is available.
                     if mainnet_flag is True:
-                        response_address = get('https://cardano-mainnet.blockfrost.io/api/v0/addresses/{}'.format(outputs['address']))['stake_address']
+                        response_address = get(mainnet + 'addresses/{}'.format(outputs['address']))['stake_address']
                     else:
-                        response_address = get('https://cardano-testnet.blockfrost.io/api/v0/addresses/{}'.format(outputs['address']))['stake_address']
+                        response_address = get(testnet + 'addresses/{}'.format(outputs['address']))['stake_address']
                     if response_address is None:
                         response_address = outputs['address']
                     addresses[trx] = response_address
@@ -105,6 +106,7 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
         # Start the graph at the Origin
         if counter == 0:
             G.add_node(counter, address=addresses[tx_hash], label='Origin', title=addresses[tx_hash], color=selected_color)
+        # Other nodes
         if counter > 0:
             if addresses[tx_hash] != script_address:
                 G.add_node(counter, address=addresses[tx_hash], label=str(counter), title=addresses[tx_hash], color=selected_color)
@@ -126,11 +128,8 @@ def track_asset(policy_id:str, asset_name:str, script_address:str="", mainnet_fl
     Provide a smart contract address to mark a specific wallet.
     """
     asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
-    print('Getting All Transactions')
     trx_hashes = all_transactions(asset, mainnet_flag)
-    print('Creating The Address Dictionary')
     addresses = txhash_to_address(trx_hashes, asset, mainnet_flag)
-    print('Building The Directed Graph')
     G = build_graph(addresses, script_address)
     return G, addresses
 
@@ -162,14 +161,16 @@ def print_address_data(addresses:list) -> None:
     """
     Print addresses data to console.
     """
-    print(len(list(set(addresses.values()))), 'Unique Wallet')
+    number_of_wallets = len(list(set(addresses.values())))
+    click.echo(click.style(f'{number_of_wallets} Unique Wallet', fg='magenta'))
+
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
-            print('Tx Hash:', txhash)
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
         else:
-            print('\nAddress:', addresses[txhash])
-            print('Tx Hash:', txhash)
+            click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='white'))
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
             printed.append(addresses[txhash])
 
 
@@ -177,9 +178,9 @@ def save_address_data(addresses:dict) -> None:
     """
     JSON dump the address dictionary into a file.
     """
-    print('Writing To File')
     with open('cnft_history.json', 'w+') as outfile:
         json.dump(addresses, outfile, indent=2)
+
 
 @click.command()
 @click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
@@ -201,13 +202,16 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
     if print_flag is True:
+        click.echo(click.style('Opening HTML page', fg='yellow'))
         print_address_data(addresses)
         nt.show('nx.html')
     elif save_flag is True:
+        click.echo(click.style('Saving html page.', fg='yellow'))
         save_address_data(addresses)
         nt.save_graph('nx.html')
     else:
-        click.echo(click.style('No flag is set.', fg='red'))
+        click.echo(click.style('Error: No flag is set.', fg='red'))
+        sys.exit()
     click.echo(click.style('\nComplete!\n', fg='green'))
 
 
