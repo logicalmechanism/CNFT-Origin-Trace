@@ -42,7 +42,8 @@ create_html_page(
     smart_contract_address,
     print_flag   = False,
     save_flag    = True,
-    mainnet_flag = True
+    mainnet_flag = True,
+    actions      = ('Withdraw', 'Sold')
 )
 ```
 
@@ -71,7 +72,8 @@ python origin_trace.py \
     --script_address addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk \
     --print_flag False \
     --save_flag True \
-    --mainnet_flag True
+    --mainnet_flag True \
+    --actions ('Withdraw', 'Sold')
 ```
 
 A help menu also exists.

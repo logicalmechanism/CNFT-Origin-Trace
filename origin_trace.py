@@ -13,7 +13,7 @@ import sys
 import json
 import click
 import matplotlib.colors as mcolors
-
+import ast
 
 ###############################################################################
 # Requires Blockfrost API Key.
@@ -28,6 +28,7 @@ def get(endpoint:str) -> dict:
     """
     Return the json reponse from an endpoint.
     """
+
     try:
         response = requests.get(endpoint, headers=headers).json()
     except (requests.exceptions.MissingSchema, json.decoder.JSONDecodeError):
@@ -39,6 +40,7 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     """
     Create a list of all the transactions for a given asset.
     """
+    
     page = 1
     trx = []
     
@@ -183,6 +185,7 @@ def con_cat(policy_id:str, asset_name:str) -> str:
     """
     Return the concatenation of the policy id and the hex encoded asset name.
     """
+    
     policy_id  = str(policy_id)
     asset_name = str(asset_name)
     asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
@@ -194,14 +197,18 @@ def track_asset(policy_id:str, asset_name:str, script_address:str="", mainnet_fl
     Track an asset by its policy and asset name from origin to present wallet.
     Provide a smart contract address to mark a specific wallet.
     """
+    
     G = nx.DiGraph()
     asset = con_cat(policy_id, asset_name)
+    
     trx_hashes = all_transactions(asset, mainnet_flag)
     if trx_hashes == []:
         return G, {}
+    
     addresses = txhash_to_address(trx_hashes, asset, mainnet_flag)
     if addresses == {}:
         return G, {}
+    
     G = build_graph(addresses, script_address)
     return G, addresses
 
@@ -210,28 +217,36 @@ def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
     """
     Return True if a vertex exists within G else False.
     """
+    
     if not isinstance(G, nx.classes.digraph.DiGraph):
         return False
+    
     try:
         val = int(val)
     except ValueError:
         return False
+    
     return any([node for node in G.nodes(data=True) if node[0] == val])
 
 
-def analyze_trajectory(G:nx.classes.digraph.DiGraph) -> nx.classes.digraph.DiGraph:
+def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> nx.classes.digraph.DiGraph:
     """
     Analyze the NFT trajectory for withdraws and sales.
     """
+    action_1 = actions[0]
+    action_2 = actions[1]
+    # Loop every node.
     for node in G.nodes(data=True):
         (n, data) = node
+        
+        # Find the Contract label and draw actions.
         if data['label'] == 'Contract' and find_node(G, n+1) is True:
             a = G.nodes(data=True)[n-1]['address']
             b = G.nodes(data=True)[n+1]['address']
             if a == b:
-                G.add_edge(n-1, n+1, trxHash="Withdraw", title="Withdraw", label="Withdraw", color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_1, title=action_1, label=action_1, color="#000000", alpha=0.54)
             else:
-                G.add_edge(n-1, n+1, trxHash="Sold", title="Sold", label="Sold", color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_2, title=action_2, label=action_2, color="#000000", alpha=0.54)
     return G
 
 
@@ -264,18 +279,19 @@ def save_address_data(addresses:dict) -> None:
 @click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
 @click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
 @click.option('--script_address', default="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", help='Optional')
-@click.option('--print_flag',     default=False,                                                        help='Optional')
-@click.option('--save_flag',      default=True,                                                         help='Optional')
-@click.option('--mainnet_flag',   default=True,                                                         help='Optional')
-def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True) -> None:
+@click.option('--print_flag',     default=False,                                                        help='Optional', show_default=True)
+@click.option('--save_flag',      default=True,                                                         help='Optional', show_default=True)
+@click.option('--mainnet_flag',   default=True,                                                         help='Optional', show_default=True)
+@click.option('--actions',        default="('Withdraw', 'Sold')",                                       help='Optional', show_default=True)
+def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> None:
     """
     Use track asset to provide information to create a html file of the direct graph. By 
     default the function prints the address data to the console.
     """
     click.echo(click.style('\nTracking Asset', fg='blue'))
-
+    actions = ast.literal_eval(actions)
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
-    G = analyze_trajectory(G)
+    G = analyze_trajectory(G, actions)
     click.echo(click.style('Creating HTML page', fg='blue'))
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
