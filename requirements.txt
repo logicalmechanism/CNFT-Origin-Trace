@@ -38,7 +38,6 @@ qrcode==7.2
 qrtools==0.0.2
 rsa==4.7.2
 schedule==1.1.0
-sip==4.19.13
 traitlets==5.1.1
 wcwidth==0.2.5
 webencodings==0.5.1
