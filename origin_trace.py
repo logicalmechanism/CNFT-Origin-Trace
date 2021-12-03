@@ -1,6 +1,7 @@
 """
-    File name: origin_trace.py
-    Author: The Ancient Kraken
+File name : origin_trace.py
+Testing   : test.py
+Author    : The Ancient Kraken
 """
 import requests
 import base64
@@ -11,6 +12,8 @@ from typing import Tuple
 import sys
 import json
 import click
+import matplotlib.colors as mcolors
+
 
 ###############################################################################
 # Requires Blockfrost API Key.
@@ -25,7 +28,10 @@ def get(endpoint:str) -> dict:
     """
     Return the json reponse from an endpoint.
     """
-    response = requests.get(endpoint, headers=headers).json()
+    try:
+        response = requests.get(endpoint, headers=headers).json()
+    except (requests.exceptions.MissingSchema, json.decoder.JSONDecodeError):
+        response = {}
     return response
 
 
@@ -35,6 +41,7 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
     """
     page = 1
     trx = []
+    
     # Query each page until nothing returns.
     while True:
         endpoint = 'assets/{}/transactions?page={}'.format(asset, page)
@@ -42,14 +49,20 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
             response = get(mainnet + endpoint)
         else:
             response = get(testnet + endpoint)
+        
+        # Any error should return an empty list.
         try:
             response['error']
             click.echo(click.style('Error: Invalid Inputs', fg='red'))
-            sys.exit()
+            return []
         except TypeError:
             pass
+        
+        # The last page will be empty.
         if response == []:
             break
+        
+        # Append the hash and increment the page.
         for obj in response:
             trx.append(obj['tx_hash'])
         page += 1
@@ -61,7 +74,13 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
     Create a dictionary of transaction hashes and addresses from a list of 
     every transaction of some asset.
     """
+    
+    # This function requries a list of hashes to work.
+    if not isinstance(trx_hashes, list):
+        return {}
+    asset = str(asset)
     addresses = {}
+    
     # Loop each tx hash from all the transactions
     for trx in trx_hashes:
         endpoint = 'txs/{}/utxos'.format(trx)
@@ -69,21 +88,47 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
             response_utxos = get(mainnet + endpoint)
         else:
             response_utxos = get(testnet + endpoint)
+        
         # Loop all the outputs from each UTxO of each transaction.
         for outputs in response_utxos['outputs']:
+            
             # Loop the amounts
             for amt in outputs['amount']:
                 if amt['unit'] == asset:
                     endpoint2 = 'addresses/{}'.format(outputs['address'])
+                    
                     # Check if stake address is available.
                     if mainnet_flag is True:
                         response_address = get(mainnet + endpoint2)['stake_address']
                     else:
                         response_address = get(testnet + endpoint2)['stake_address']
+                    
+                    # Use the wallet address if a stake address doesn't exist.
                     if response_address is None:
                         response_address = outputs['address']
                     addresses[trx] = response_address
     return addresses
+
+def select_colors(number:int) -> list:
+    """
+    Select N unique colors that are distingishable.
+    """
+
+    # The number must be an int.
+    try:
+        number = int(number)
+    except ValueError:
+        return []
+    
+    # Use the tableau colors for low values of number
+    tc = mcolors.TABLEAU_COLORS
+    full_color_list = list(tc.values())
+    if number <= len(full_color_list):
+        colors = full_color_list[:number]
+    else:
+        # If more than 10 colors are required then just randomly generate the colors and hope for the best.
+        colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(number)]
+    return colors
 
 
 def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGraph:
@@ -92,11 +137,22 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
     addresses, using the smart contract address to pinpoint a specific
     wallet during the trace.
     """
+    
+    # A empty graph.
     G = nx.DiGraph()
+    
+    # This function requires addresses to be a dict.
+    if not isinstance(addresses, dict):
+        return G
+    
+    script_address = str(script_address)
     counter = 0
     unique_addresses = list(set(addresses.values()))
+    
     # Randomly generate a list of colors with size len(unique addresses).
-    list_of_colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(len(unique_addresses))]
+    # list_of_colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(len(unique_addresses))]
+    list_of_colors = select_colors(len(unique_addresses))
+    
     # Loop all the transaction hashes from the addresses.
     for tx_hash in addresses:
         nodes = [x for x,y in G.nodes(data=True) if y['address'] == addresses[tx_hash]] # Correct node count.
@@ -123,15 +179,29 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
         counter += 1
     return G
 
+def con_cat(policy_id:str, asset_name:str) -> str:
+    """
+    Return the concatenation of the policy id and the hex encoded asset name.
+    """
+    policy_id  = str(policy_id)
+    asset_name = str(asset_name)
+    asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
+    return asset
+
 
 def track_asset(policy_id:str, asset_name:str, script_address:str="", mainnet_flag:bool=True) -> Tuple[nx.classes.digraph.DiGraph, dict]:
     """
     Track an asset by its policy and asset name from origin to present wallet.
     Provide a smart contract address to mark a specific wallet.
     """
-    asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
+    G = nx.DiGraph()
+    asset = con_cat(policy_id, asset_name)
     trx_hashes = all_transactions(asset, mainnet_flag)
+    if trx_hashes == []:
+        return G, {}
     addresses = txhash_to_address(trx_hashes, asset, mainnet_flag)
+    if addresses == {}:
+        return G, {}
     G = build_graph(addresses, script_address)
     return G, addresses
 
@@ -140,6 +210,12 @@ def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
     """
     Return True if a vertex exists within G else False.
     """
+    if not isinstance(G, nx.classes.digraph.DiGraph):
+        return False
+    try:
+        val = int(val)
+    except ValueError:
+        return False
     return any([node for node in G.nodes(data=True) if node[0] == val])
 
 

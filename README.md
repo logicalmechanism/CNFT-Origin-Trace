@@ -93,3 +93,13 @@ Options:
   --mainnet_flag BOOLEAN  Optional
   --help                  Show this message and exit.
 ```
+
+## Testing
+
+The file ```origin_trace.py``` has a unittest located in the test.py file.
+
+Run all the tests with the command below.
+
+```
+python test.py
+```
