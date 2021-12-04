@@ -4,6 +4,8 @@ Testing     : test.py
 Author      : The Ancient Kraken
 Description : A python script to perform an origin trace on a CNFT.
 """
+
+
 import requests
 import base64
 import networkx as nx
@@ -14,11 +16,21 @@ import json
 import click
 import matplotlib.colors as mcolors
 import ast
+from sys import exit
+
 
 ###############################################################################
 # Requires Blockfrost API Key.
-with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-headers    = { 'Project_id': API_KEY}
+try:
+    with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
+    headers    = { 'Project_id': API_KEY}
+except FileNotFoundError:
+    click.echo(click.style('\nThe script expects the blockfrost_api.key file to be inside the base directory.', fg='red'))
+    exit(1)
+except IndexError:
+    click.echo(click.style('\nThe script expects the api key to be placed inside the blockfrost_api.key file.', fg='red'))
+    exit(1)
+    
 mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
 testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
 ###############################################################################
@@ -112,9 +124,16 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
     return addresses
 
 
+def random_colors(amount:int) -> list:
+    """
+    Create an amount of random colors inside a list.
+    """
+    return ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(amount)]
+
+
 def select_colors(number:int) -> list:
     """
-    Select N unique colors that are distingishable.
+    Select N unique colors that are distingishable else reeturn an empty list.
     """
 
     # The number must be an int.
@@ -123,14 +142,15 @@ def select_colors(number:int) -> list:
     except ValueError:
         return []
     
-    # Use the tableau colors for low values of number
+    # Use the tableau colors for less than 11 colors.
     tc = mcolors.TABLEAU_COLORS
     full_color_list = list(tc.values())
     if number <= len(full_color_list):
         colors = full_color_list[:number]
     else:
         # If more than 10 colors are required then just randomly generate the colors and hope for the best.
-        colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(number)]
+        additional = number-len(full_color_list)
+        colors = full_color_list + random_colors(additional)
     return colors
 
 
@@ -179,10 +199,18 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
                 # A specific address to uniquely label.
                 G.add_node(counter-1, label='Wallet')
                 G.add_node(counter, address=addresses[tx_hash], label='Contract', title=addresses[tx_hash], color=selected_color)
+            
             # Add edge only if there exists one.
             G.add_edge(counter-1, counter, trxHash=tx_hash, title=tx_hash)
         counter += 1
     return G
+
+
+def ascii_to_hex(string:str) -> str:
+    """
+    Convert an ascii string into hex
+    """
+    return base64.b16encode(bytes(string.encode('utf-8'))).decode('utf-8').lower()
 
 
 def con_cat(policy_id:str, asset_name:str) -> str:
@@ -192,7 +220,7 @@ def con_cat(policy_id:str, asset_name:str) -> str:
     
     policy_id  = str(policy_id)
     asset_name = str(asset_name)
-    asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
+    asset = policy_id + ascii_to_hex(asset_name)
     return asset
 
 
@@ -235,7 +263,9 @@ def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
 
 def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> nx.classes.digraph.DiGraph:
     """
-    Analyze the NFT trajectory for withdraws and sales.
+    Analyze the NFT trajectory.
+
+    This currently applies a binary action to the smart contract. It defaults to Withdraws and Sold.
     """
     
     action_1 = actions[0]
@@ -250,9 +280,9 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('W
             a = G.nodes(data=True)[n-1]['address']
             b = G.nodes(data=True)[n+1]['address']
             if a == b:
-                G.add_edge(n-1, n+1, trxHash=action_1, title=action_1, label=action_1, color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_1, title=action_1, label=action_1, color="#000000", alpha=0.4)
             else:
-                G.add_edge(n-1, n+1, trxHash=action_2, title=action_2, label=action_2, color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_2, title=action_2, label=action_2, color="#000000", alpha=0.4)
     return G
 
 
@@ -264,6 +294,7 @@ def print_address_data(addresses:list, script_address: str) -> None:
     number_of_wallets = len(list(set(addresses.values())))
     click.echo(click.style(f'{number_of_wallets} Unique Wallets', fg='magenta'))
 
+    # Print only new data to the console.
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
@@ -288,6 +319,9 @@ def save_address_data(addresses:dict) -> None:
             json.dump(addresses, outfile, indent=2)
 
 
+###############################################################################
+
+
 @click.command()
 @click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
 @click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
@@ -298,14 +332,15 @@ def save_address_data(addresses:dict) -> None:
 @click.option('--actions',        default="('Withdraw', 'Sold')",                                       help='Optional', show_default=True)
 def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> None:
     """
-    Use track asset to provide information to create a html file of the direct graph. By 
-    default the function prints the address data to the console.
+    Creates a html file of a direct graph representing the activity of the policy_id.asset_name NFT.
     """
     
     # Track asset
     click.echo(click.style('\nTracking Asset', fg='blue'))
     actions = ast.literal_eval(actions)
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
+    if addresses == {}:
+        exit(1)
     G = analyze_trajectory(G, actions)
     
     # Create html page
@@ -324,6 +359,8 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
         nt.save_graph('nx.html')
     else:
         click.echo(click.style('Error: No Flag Is Set.', fg='red'))
+        exit(1)
+    
     # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))
 

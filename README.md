@@ -14,18 +14,21 @@ This is a directed graph where each node is a unique wallet and each colored edg
 - [Click](https://github.com/pallets/click/)
 - [PyVis](https://github.com/WestHealth/pyvis)
 - [NetworkX](https://github.com/networkx/networkx)
+- [Requests](https://github.com/psf/requests)
+- [Matplotlib](https://github.com/matplotlib/matplotlib)
+
+This file requires the newest versions of the modules above.
 
 This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. Place the api key into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
-
-Use the requirements.txt file to install the python requirements with the pip command below.
-
-```bash
-pip install -r requirements.txt
+```
+CNFT-Origin-Trace/
+  > origin_trace.py
+  > blockfrost_api.key
 ```
 
 ## How to use
 
-The file is designed to be imported and ran from the terminal.
+The file is designed to be imported and ran from the terminal. Please refer to the [importing section](#importing) or the [command line section](#command-line).
 
 ### Importing
 
@@ -49,7 +52,7 @@ create_html_page(
 
 If print is set to true, it will display the information inside the terminal and attempt to open nx.html in the default internet browser. 
 
-If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into a json file, cnft_history.json.
+If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into thecnft_history.json files.
 
 Set mainet_flag to False for testnet tracing.
 
@@ -78,13 +81,13 @@ python origin_trace.py \
 
 A help menu also exists.
 
-```
+```bash
 python origin_trace.py --help
 
 Usage: origin_trace.py [OPTIONS]
 
-  Use track asset to provide information to create a html file of the direct
-  graph. By  default the function prints the address data to the console.
+  Creates a html file of a direct graph representing the activity of the
+  policy_id.asset_name NFT.
 
 Options:
   --policy_id TEXT        Required
@@ -99,10 +102,4 @@ Options:
 
 ## Testing
 
-The file ```origin_trace.py``` has a unittest located in the test.py file.
-
-Run all the tests with the command below.
-
-```
-python test.py
-```
+Unit tests for ```origin_trace.py``` are located in the test.py file.
