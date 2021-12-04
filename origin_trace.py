@@ -24,6 +24,9 @@ try:
 except FileNotFoundError:
     click.echo(click.style('\nThe script expects the blockfrost_api.key file to be inside the base directory.', fg='red'))
     exit(1)
+except IndexError:
+    click.echo(click.style('\nThe script expects the api key to be placed inside the blockfrost_api.key file.', fg='red'))
+    exit(1)
     
 mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
 testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
@@ -129,14 +132,14 @@ def select_colors(number:int) -> list:
     except ValueError:
         return []
     
-    # Use the tableau colors for low values of number
+    # Use the tableau colors for less than 11 colors.
     tc = mcolors.TABLEAU_COLORS
     full_color_list = list(tc.values())
     if number <= len(full_color_list):
         colors = full_color_list[:number]
     else:
         # If more than 10 colors are required then just randomly generate the colors and hope for the best.
-        colors = ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(number)]
+        colors = full_color_list + ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(number-len(full_color_list))]
     return colors
 
 
@@ -241,7 +244,9 @@ def find_node(G:nx.classes.digraph.DiGraph, val:int) -> bool:
 
 def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> nx.classes.digraph.DiGraph:
     """
-    Analyze the NFT trajectory for withdraws and sales.
+    Analyze the NFT trajectory.
+
+    This currently applies a binary action to the smart contract. It defaults to Withdraws and Sold.
     """
     
     action_1 = actions[0]
@@ -294,6 +299,9 @@ def save_address_data(addresses:dict) -> None:
             json.dump(addresses, outfile, indent=2)
 
 
+###############################################################################
+
+
 @click.command()
 @click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
 @click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
@@ -304,14 +312,15 @@ def save_address_data(addresses:dict) -> None:
 @click.option('--actions',        default="('Withdraw', 'Sold')",                                       help='Optional', show_default=True)
 def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> None:
     """
-    Use track asset to provide information to create a html file of the direct graph. By 
-    default the function prints the address data to the console.
+    Creates a html file of a direct graph representing the activity of the policy_id.asset_name NFT.
     """
     
     # Track asset
     click.echo(click.style('\nTracking Asset', fg='blue'))
     actions = ast.literal_eval(actions)
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
+    if addresses == {}:
+        exit(1)
     G = analyze_trajectory(G, actions)
     
     # Create html page
@@ -330,6 +339,7 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
         nt.save_graph('nx.html')
     else:
         click.echo(click.style('Error: No Flag Is Set.', fg='red'))
+        exit(1)
     
     # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))
