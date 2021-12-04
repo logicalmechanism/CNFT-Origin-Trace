@@ -14,18 +14,21 @@ This is a directed graph where each node is a unique wallet and each colored edg
 - [Click](https://github.com/pallets/click/)
 - [PyVis](https://github.com/WestHealth/pyvis)
 - [NetworkX](https://github.com/networkx/networkx)
+- [Requests](https://github.com/psf/requests)
+- [Matplotlib](https://github.com/matplotlib/matplotlib)
+
+This file requires the newest versions of the modules above.
 
 This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. Place the api key into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
-
-Use the requirements.txt file to install the python requirements with the pip command below.
-
-```bash
-pip install -r requirements.txt
+```
+CNFT-Origin-Trace/
+  > origin_trace.py
+  > blockfrost_api.key
 ```
 
 ## How to use
 
-The file is designed to be imported and ran from the terminal.
+The file is designed to be imported and ran from the terminal. Please refer to the [importing section](#importing) or the [command line section](#command-line).
 
 ### Importing
 
@@ -99,10 +102,4 @@ Options:
 
 ## Testing
 
-The file ```origin_trace.py``` has a unittest located in the test.py file.
-
-Run all the tests with the command below.
-
-```
-python test.py
-```
+Unit tests for ```origin_trace.py``` are located in the test.py file.

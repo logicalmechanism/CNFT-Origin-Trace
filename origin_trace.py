@@ -14,11 +14,17 @@ import json
 import click
 import matplotlib.colors as mcolors
 import ast
+from sys import exit
 
 ###############################################################################
 # Requires Blockfrost API Key.
-with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-headers    = { 'Project_id': API_KEY}
+try:
+    with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
+    headers    = { 'Project_id': API_KEY}
+except FileNotFoundError:
+    click.echo(click.style('\nThe script expects the blockfrost_api.key file to be inside the base directory.', fg='red'))
+    exit(1)
+    
 mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
 testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
 ###############################################################################
@@ -324,6 +330,7 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
         nt.save_graph('nx.html')
     else:
         click.echo(click.style('Error: No Flag Is Set.', fg='red'))
+    
     # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))
 
