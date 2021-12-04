@@ -52,7 +52,7 @@ create_html_page(
 
 If print is set to true, it will display the information inside the terminal and attempt to open nx.html in the default internet browser. 
 
-If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into a json file, cnft_history.json.
+If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into thecnft_history.json files.
 
 Set mainet_flag to False for testnet tracing.
 
@@ -81,13 +81,13 @@ python origin_trace.py \
 
 A help menu also exists.
 
-```
+```bash
 python origin_trace.py --help
 
 Usage: origin_trace.py [OPTIONS]
 
-  Use track asset to provide information to create a html file of the direct
-  graph. By  default the function prints the address data to the console.
+  Creates a html file of a direct graph representing the activity of the
+  policy_id.asset_name NFT.
 
 Options:
   --policy_id TEXT        Required

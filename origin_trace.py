@@ -4,6 +4,8 @@ Testing     : test.py
 Author      : The Ancient Kraken
 Description : A python script to perform an origin trace on a CNFT.
 """
+
+
 import requests
 import base64
 import networkx as nx
@@ -15,6 +17,7 @@ import click
 import matplotlib.colors as mcolors
 import ast
 from sys import exit
+
 
 ###############################################################################
 # Requires Blockfrost API Key.
@@ -121,9 +124,16 @@ def txhash_to_address(trx_hashes:list, asset:str, mainnet_flag:bool=True) -> dic
     return addresses
 
 
+def random_colors(amount:int) -> list:
+    """
+    Create an amount of random colors inside a list.
+    """
+    return ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(amount)]
+
+
 def select_colors(number:int) -> list:
     """
-    Select N unique colors that are distingishable.
+    Select N unique colors that are distingishable else reeturn an empty list.
     """
 
     # The number must be an int.
@@ -139,7 +149,8 @@ def select_colors(number:int) -> list:
         colors = full_color_list[:number]
     else:
         # If more than 10 colors are required then just randomly generate the colors and hope for the best.
-        colors = full_color_list + ["#"+''.join([random.choice('ABCDEF0123456789') for i in range(6)]) for j in range(number-len(full_color_list))]
+        additional = number-len(full_color_list)
+        colors = full_color_list + random_colors(additional)
     return colors
 
 
@@ -188,10 +199,18 @@ def build_graph(addresses:dict, script_address:str,) -> nx.classes.digraph.DiGra
                 # A specific address to uniquely label.
                 G.add_node(counter-1, label='Wallet')
                 G.add_node(counter, address=addresses[tx_hash], label='Contract', title=addresses[tx_hash], color=selected_color)
+            
             # Add edge only if there exists one.
             G.add_edge(counter-1, counter, trxHash=tx_hash, title=tx_hash)
         counter += 1
     return G
+
+
+def ascii_to_hex(string:str) -> str:
+    """
+    Convert an ascii string into hex
+    """
+    return base64.b16encode(bytes(string.encode('utf-8'))).decode('utf-8').lower()
 
 
 def con_cat(policy_id:str, asset_name:str) -> str:
@@ -201,7 +220,7 @@ def con_cat(policy_id:str, asset_name:str) -> str:
     
     policy_id  = str(policy_id)
     asset_name = str(asset_name)
-    asset = policy_id + base64.b16encode(bytes(asset_name.encode('utf-8'))).decode('utf-8').lower()
+    asset = policy_id + ascii_to_hex(asset_name)
     return asset
 
 
@@ -261,9 +280,9 @@ def analyze_trajectory(G:nx.classes.digraph.DiGraph, actions:Tuple[str, str]=('W
             a = G.nodes(data=True)[n-1]['address']
             b = G.nodes(data=True)[n+1]['address']
             if a == b:
-                G.add_edge(n-1, n+1, trxHash=action_1, title=action_1, label=action_1, color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_1, title=action_1, label=action_1, color="#000000", alpha=0.4)
             else:
-                G.add_edge(n-1, n+1, trxHash=action_2, title=action_2, label=action_2, color="#000000", alpha=0.54)
+                G.add_edge(n-1, n+1, trxHash=action_2, title=action_2, label=action_2, color="#000000", alpha=0.4)
     return G
 
 
@@ -275,6 +294,7 @@ def print_address_data(addresses:list, script_address: str) -> None:
     number_of_wallets = len(list(set(addresses.values())))
     click.echo(click.style(f'{number_of_wallets} Unique Wallets', fg='magenta'))
 
+    # Print only new data to the console.
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
