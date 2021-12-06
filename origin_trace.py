@@ -17,19 +17,26 @@ import click
 import matplotlib.colors as mcolors
 import ast
 from sys import exit
-
+import os
 
 ###############################################################################
 # Requires Blockfrost API Key.
 try:
-    with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
-    headers    = { 'Project_id': API_KEY}
-except FileNotFoundError:
-    click.echo(click.style('\nThe script expects the blockfrost_api.key file to be inside the base directory.', fg='red'))
-    exit(1)
-except IndexError:
-    click.echo(click.style('\nThe script expects the api key to be placed inside the blockfrost_api.key file.', fg='red'))
-    exit(1)
+    API_KEY = os.environ['BLOCKFROST_API_KEY']
+    headers = { 'Project_id': API_KEY}
+    click.echo(click.style('\nThe Blockfrost api key is in the environment variables.', fg='green'))
+except KeyError:
+    click.echo(click.style('\nThe script did not find the Blockfrost api key in environment variables.', fg='yellow'))
+    try:
+        with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
+        headers = { 'Project_id': API_KEY}
+        click.echo(click.style('\nThe Blockfrost api key is in the blockfrost_api.key file.', fg='green'))
+    except FileNotFoundError:
+        click.echo(click.style('\nThe script did not find a blockfrost_api.key file to be inside the base directory.', fg='red'))
+        exit(1)
+    except IndexError:
+        click.echo(click.style('\nThe script expects the api key to be placed inside the blockfrost_api.key file.', fg='red'))
+        exit(1)
     
 mainnet    = "https://cardano-mainnet.blockfrost.io/api/v0/"
 testnet    = "https://cardano-testnet.blockfrost.io/api/v0/"
@@ -67,7 +74,7 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
         # Any error should return an empty list.
         try:
             response['error']
-            click.echo(click.style('Error: Invalid Inputs', fg='red'))
+            click.echo(click.style(f'Error: {response["message"]}', fg='red'))
             return []
         except TypeError:
             pass
@@ -292,7 +299,7 @@ def print_address_data(addresses:list, script_address: str) -> None:
     """
     
     number_of_wallets = len(list(set(addresses.values())))
-    click.echo(click.style(f'{number_of_wallets} Unique Wallets', fg='magenta'))
+    click.echo(click.style(f'\n{number_of_wallets} Unique Wallets', fg='magenta'))
 
     # Print only new data to the console.
     printed = []
@@ -323,7 +330,7 @@ def save_address_data(addresses:dict) -> None:
 
 
 @click.command()
-@click.option('--policy_id',      prompt='The policy id of the NFT.',                                   help='Required')
+@click.option('--policy_id',      prompt='\nThe policy id of the NFT.',                                 help='Required')
 @click.option('--asset_name',     prompt='The asset name of the NFT.',                                  help='Required')
 @click.option('--script_address', default="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", help='Optional')
 @click.option('--print_flag',     default=False,                                                        help='Optional', show_default=True)
@@ -334,9 +341,11 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     """
     Creates a html file of a direct graph representing the activity of the policy_id.asset_name NFT.
     """
-    
+    if print_flag is False and save_flag is False:
+        click.echo(click.style('Error: The Print And Save Flags Are False.', fg='red'))
+        exit(1)
     # Track asset
-    click.echo(click.style('\nTracking Asset', fg='blue'))
+    click.echo(click.style('\nTracking Asset..', fg='blue'))
     actions = ast.literal_eval(actions)
     G, addresses = track_asset(policy_id, asset_name, script_address, mainnet_flag)
     if addresses == {}:
@@ -344,22 +353,20 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     G = analyze_trajectory(G, actions)
     
     # Create html page
-    click.echo(click.style('Creating HTML page', fg='blue'))
+    click.echo(click.style('Creating HTML Page..', fg='blue'))
     nt = Network('100%', '100%', heading=policy_id+'.'+asset_name, directed=True)
     nt.from_nx(G)
     
     # Flag Checking
     if print_flag is True:
-        click.echo(click.style('Opening HTML page', fg='yellow'))
         print_address_data(addresses, script_address)
+        click.echo(click.style('Opening HTML Page..', fg='yellow'))
         nt.show('nx.html')
-    elif save_flag is True:
-        click.echo(click.style('Saving html page.', fg='yellow'))
+    
+    if save_flag is True:
         save_address_data(addresses)
+        click.echo(click.style('Saving HTML Page..', fg='yellow'))
         nt.save_graph('nx.html')
-    else:
-        click.echo(click.style('Error: No Flag Is Set.', fg='red'))
-        exit(1)
     
     # Complete
     click.echo(click.style('\nComplete!\n', fg='green'))

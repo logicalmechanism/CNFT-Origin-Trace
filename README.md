@@ -19,7 +19,12 @@ This is a directed graph where each node is a unique wallet and each colored edg
 
 This file requires the newest versions of the modules above.
 
-This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. Place the api key into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
+This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. The api key can be an environment variable called BLOCKFROST_API_KEY or the api key can be placed into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
+
+```bash
+export BLOCKFROST_API_KEY="Blockfrost API Key Here"
+```
+
 ```
 CNFT-Origin-Trace/
   > origin_trace.py
@@ -52,7 +57,7 @@ create_html_page(
 
 If print is set to true, it will display the information inside the terminal and attempt to open nx.html in the default internet browser. 
 
-If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into thecnft_history.json files.
+If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into the cnft_history.json files.
 
 Set mainet_flag to False for testnet tracing.
 
