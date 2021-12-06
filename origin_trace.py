@@ -19,14 +19,19 @@ import ast
 from sys import exit
 import os
 
+
 ###############################################################################
-# Requires Blockfrost API Key. Check environment variable then key file.
+#
+# Requires Blockfrost API Key.
+#
+# Check env var then file.
 try:
     API_KEY = os.environ['BLOCKFROST_API_KEY']
     headers = { 'Project_id': API_KEY}
     click.echo(click.style('\nThe Blockfrost api key is in the environment variables.', fg='green'))
 except KeyError:
     click.echo(click.style('\nThe script did not find the Blockfrost api key in environment variables.', fg='yellow'))
+    # Check if the key is inside the blockfrost_api.key file.
     try:
         with open("blockfrost_api.key", "r") as read_content: API_KEY = read_content.read().splitlines()[0]
         headers = { 'Project_id': API_KEY}
@@ -79,7 +84,7 @@ def all_transactions(asset:str, mainnet_flag:bool=True) -> list:
         except TypeError:
             pass
         
-        # The last page will be empty.
+        # The last page will be an empty list.
         if response == []:
             break
         
@@ -337,7 +342,7 @@ def save_address_data(addresses:dict) -> None:
 @click.option('--save_flag',      default=True,                                                         help='Optional', show_default=True)
 @click.option('--mainnet_flag',   default=True,                                                         help='Optional', show_default=True)
 @click.option('--actions',        default="('Withdraw', 'Sold')",                                       help='Optional', show_default=True)
-def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl5fauf4m4thqze74kvxk8efcj4n7qjx005v33ympj7uwsscprfk", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> None:
+def create_html_page(policy_id:str, asset_name:str, script_address:str="", print_flag:bool=False, save_flag:bool=True, mainnet_flag:bool=True, actions:Tuple[str, str]=('Withdraw', 'Sold')) -> None:
     """
     Creates a html file of a direct graph representing the activity of the policy_id.asset_name NFT.
     """
