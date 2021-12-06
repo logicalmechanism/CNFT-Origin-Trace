@@ -20,7 +20,7 @@ from sys import exit
 import os
 
 ###############################################################################
-# Requires Blockfrost API Key.
+# Requires Blockfrost API Key. Check environment variable then key file.
 try:
     API_KEY = os.environ['BLOCKFROST_API_KEY']
     headers = { 'Project_id': API_KEY}
@@ -305,13 +305,13 @@ def print_address_data(addresses:list, script_address: str) -> None:
     printed = []
     for txhash in addresses:
         if addresses[txhash] in printed:
-            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='bright_magenta'))
         else:
             if addresses[txhash] == script_address:
-                click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='yellow'))
+                click.echo(click.style(f'\nScript: {addresses[txhash]}', fg='bright_yellow'))
             else:
-                click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='white'))
-            click.echo(click.style(f'Tx Hash: {txhash}', fg='cyan'))
+                click.echo(click.style(f'\nAddress: {addresses[txhash]}', fg='bright_white'))
+            click.echo(click.style(f'Tx Hash: {txhash}', fg='bright_magenta'))
             printed.append(addresses[txhash])
 
 
@@ -360,12 +360,12 @@ def create_html_page(policy_id:str, asset_name:str, script_address:str="addr1wyl
     # Flag Checking
     if print_flag is True:
         print_address_data(addresses, script_address)
-        click.echo(click.style('Opening HTML Page..', fg='yellow'))
+        click.echo(click.style('Opening HTML Page..', fg='cyan'))
         nt.show('nx.html')
     
     if save_flag is True:
         save_address_data(addresses)
-        click.echo(click.style('Saving HTML Page..', fg='yellow'))
+        click.echo(click.style('Saving HTML Page..', fg='cyan'))
         nt.save_graph('nx.html')
     
     # Complete
