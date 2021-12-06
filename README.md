@@ -6,7 +6,7 @@ A python script to perform an origin trace on a CNFT.
 
 ## What is this graph?
 
-This is a directed graph where each node is a unique wallet and each colored edge is a transaction going between unique wallets. The darker edges represent either a withdraw and sell action and do not represent NFT movement. Each color used in the graph is defined by the amount of unique wallets. If two or more nodes have colors that are equal then its the same wallet. The graph starts at the Origin node and follows the NFT as it moves throughout the blockchain.
+This is a directed graph where each node is a unique wallet and each edge is a transaction going between unique wallets. The black edges represent an action on the smart contract and do not represent NFT movement. The number of colors used in the graph is defined by the amount of unique wallets. If two or more nodes have the same color then its the same wallet. The graph starts at the Origin node with the minting transaction and follows the NFT as it moves throughout the blockchain.
 
 ### Requirements
 
@@ -17,9 +17,7 @@ This is a directed graph where each node is a unique wallet and each colored edg
 - [Requests](https://github.com/psf/requests)
 - [Matplotlib](https://github.com/matplotlib/matplotlib)
 
-This file requires the newest versions of the modules above.
-
-This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. The api key can be an environment variable called BLOCKFROST_API_KEY or the api key can be placed into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
+This file requires a mainnet or testnet Blockfrost API key. Please visit [BlockFrost](https://blockfrost.io/) and create a free api key. The api key can be exported into an environment variable called BLOCKFROST_API_KEY or the api key can be placed into a file called blockfrost_api.key inside the CNFT-Origin-Trace folder.
 
 ```bash
 export BLOCKFROST_API_KEY="Blockfrost API Key Here"
@@ -55,11 +53,11 @@ create_html_page(
 )
 ```
 
-If print is set to true, it will display the information inside the terminal and attempt to open nx.html in the default internet browser. 
+If print_flag is set to true then it will display the information inside the terminal and attempt to open nx.html in the default internet browser. 
 
-If save is set to true then it will just save the nx.html file to the local folder and it will save all the addresses and transactions into the cnft_history.json files.
+If save_flag is set to true then it will save the graph to the nx.html file and it will save all the addresses and transaction hashes into the cnft_history.json file.
 
-Set mainet_flag to False for testnet tracing.
+Set mainet_flag to False for testnet origin tracing.
 
 ### Command line
 
